@@ -8,9 +8,24 @@ from src.preload.assets import CustomFont
 from src.preload.shared import shared_data
 from typing import Tuple
 
+import json
+import os
+
+def load_highscore(file_path="highscore.json"):
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            return data.get("highscore", 0)
+    return 0  # Retorna 0 caso o arquivo não exista
+
+def save_highscore(highscore, file_path="highscore.json"):
+    data = {"highscore": highscore}
+    with open(file_path, 'w') as file:
+        json.dump(data, file)
+
 
 class ScoreSys:
-    def __init__(self, text_color: Tuple[int, int, int]):
+    def __init__(self, text_color: Tuple[int, int, int], highscore_file="highscore.json"):
         self.font = CustomFont.get_font('PressStart2P', 20)
         self.padding = 25
         self.score_incrementer = 1
@@ -29,7 +44,8 @@ class ScoreSys:
         self.blink_animation_timer = Timer(self.blink_delay)
 
         self.score = 0
-        self.highest_score = 0
+        # Carregar o HighScore do arquivo JSON
+        self.highest_score = load_highscore(highscore_file)
         self.score_length = 5
 
         self.reached_milestone = False
@@ -41,6 +57,8 @@ class ScoreSys:
         self.highest_score_text = self.font.render(f'HI {self.compute_visual(self.highest_score)}', True, self.current_color)
         rect_x, rect_y = self.score_rect.midleft
         self.highest_score_rect = self.highest_score_text.get_rect(midright=(rect_x - self.padding, rect_y))
+
+        self.highscore_file = highscore_file
 
     def increment_score(self):
         self.score_timer.set_current_time()
@@ -69,7 +87,7 @@ class ScoreSys:
                 self.reached_milestone = True
                 self.blink_animation_timer.set_static_point()
                 self.animation_play_time_timer.set_static_point()
-
+                
     def redraw(self):
         if self.reached_milestone:
             self.milestone_animation()
@@ -110,6 +128,10 @@ class ScoreSys:
 
     def reset(self):
         self.highest_score = max(self.score, self.highest_score)
+        
+        # Salvar o HighScore no arquivo JSON
+        save_highscore(self.highest_score, self.highscore_file)
+
         self.score_incrementer_subtractor_delay = 0
         self.score = 0
         self.score_text = self.font.render(self.compute_visual(self.score), True, self.current_color)
